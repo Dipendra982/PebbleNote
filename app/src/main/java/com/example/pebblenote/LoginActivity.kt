@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
 
 class LoginActivity : ComponentActivity() {
@@ -63,6 +64,7 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
     var rememberMeChecked by remember { mutableStateOf(false) }
     var isAdminSelected by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf<String?>(null) }
+    val ctx = LocalContext.current
 
     val startColor = Color(0xFFF8C1D9)
     val endColor = Color(0xFFCDB4F6)
@@ -250,7 +252,6 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
 
                             if (ok) {
                                 // Persist remember me
-                                val ctx = androidx.compose.ui.platform.LocalContext.current
                                 if (rememberMeChecked) {
                                     val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
                                     prefs.edit()
