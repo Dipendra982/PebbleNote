@@ -1,0 +1,215 @@
+package com.example.pebblenote
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.pebblenote.ui.theme.PebbleNoteTheme
+
+// NOTE: This file relies on the existence of CustomAuthTextField in your TextFields.kt
+// and the presence of R.drawable.eye and R.drawable.eyeclose.
+
+class RegistrationActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            PebbleNoteTheme {
+                RegistrationScreen(onRegistered = {
+                    startActivity(android.content.Intent(this, DashboardActivity::class.java))
+                    finish()
+                })
+            }
+        }
+    }
+}
+
+@Composable
+fun RegistrationScreen(onRegistered: () -> Unit = {}) {
+    // State variables for registration fields
+    var fullName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    // Colors matching the Login page gradient
+    val startColor = Color(0xFFF8C1D9) // Light Pink
+    val endColor = Color(0xFFCDB4F6)   // Light Purple
+    val gradientBrush = Brush.horizontalGradient(
+        colors = listOf(startColor, endColor)
+    )
+
+    Scaffold(
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, start = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { /* Handle back press */ }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.Black
+                    )
+                }
+            }
+        },
+        containerColor = Color.White
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color.White)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Fills available space
+                    .clip(
+                        RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
+                    )
+                    .background(Color.White)
+            ) {
+                // Background gradient for the rounded top part (Frame and Color from Login)
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            brush = gradientBrush,
+                            shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
+                        )
+                        .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
+                        .fillMaxHeight(0.40f) // Matches the height adjustment from Login
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 40.dp), // Matches the vertical positioning from Login
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // --- Header Text ---
+                    Text(
+                        text = "Create Your Account",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "We're here to help you reach the peaks of learning. Are you ready?",
+                        fontSize = 14.sp,
+                        color = Color.DarkGray,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(48.dp))
+
+                    // --- Form Fields ---
+
+                    // Full Name TextField
+                    CustomAuthTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        label = "Enter full name"
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Email TextField
+                    CustomAuthTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = "Enter email",
+                        keyboardType = KeyboardType.Email
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Password TextField
+                    CustomAuthTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = "Enter password",
+                        keyboardType = KeyboardType.Password,
+                        isPassword = true,
+                        passwordVisible = passwordVisible,
+                        onPasswordToggle = { passwordVisible = !passwordVisible }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // "Forgot password?" Link (Matching Login screen's footer placement)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(
+                            text = "Forgot password?",
+                            color = endColor,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                    }
+
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // "Get Started" Button (Matching the White Background/Black Text style from Login)
+                    Button(
+                        onClick = { onRegistered() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color.Black
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    ) {
+                        Text(
+                            text = "Get Started",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun RegistrationScreenPreview() {
+    PebbleNoteTheme {
+        RegistrationScreen()
+    }
+}

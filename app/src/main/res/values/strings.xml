@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PebbleNote</string>
+    <string name="total_photos">Total Photos</string>
+    <string name="total_views">Total Views</string>
+</resources>
