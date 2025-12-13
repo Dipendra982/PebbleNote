@@ -32,20 +32,25 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PebbleNoteTheme {
-                LoginScreen(onLoggedIn = {
-                    startActivity(android.content.Intent(this, DashboardActivity::class.java))
-                    finish()
-                })
+                LoginScreen(
+                    onLoginResult = { isAdmin ->
+                        val dest = if (isAdmin) AdminDashboardActivity::class.java else DashboardActivity::class.java
+                        startActivity(android.content.Intent(this, dest))
+                        finish()
+                    }
+                )
             }
         }
     }
 }
 @Composable
-fun LoginScreen(onLoggedIn: () -> Unit = {}) {
+fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMeChecked by remember { mutableStateOf(false) }
+    var isAdminSelected by remember { mutableStateOf(false) }
+    var errorText by remember { mutableStateOf<String?>(null) }
 
     val startColor = Color(0xFFF8C1D9)
     val endColor = Color(0xFFCDB4F6)
@@ -184,9 +189,60 @@ fun LoginScreen(onLoggedIn: () -> Unit = {}) {
 
                     Spacer(modifier = Modifier.height(32.dp))
 
+                    // Role selector (Admin / User)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilterChip(
+                            selected = isAdminSelected,
+                            onClick = { isAdminSelected = true },
+                            label = { Text("Admin") },
+                            leadingIcon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = null) }
+                        )
+                        FilterChip(
+                            selected = !isAdminSelected,
+                            onClick = { isAdminSelected = false },
+                            label = { Text("User") },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Error text if credentials invalid
+                    if (errorText != null) {
+                        Text(
+                            text = errorText!!,
+                            color = Color.Red,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
                     // START OF BUTTON FIX
                     Button(
-                        onClick = { onLoggedIn() },
+                        onClick = {
+                            // Dummy credentials
+                            val adminUser = "admin@example.com"
+                            val adminPass = "Admin@123"
+                            val normalUser = "user@example.com"
+                            val normalPass = "User@123"
+
+                            val ok = if (isAdminSelected) {
+                                email.equals(adminUser, ignoreCase = true) && password == adminPass
+                            } else {
+                                email.equals(normalUser, ignoreCase = true) && password == normalPass
+                            }
+
+                            if (ok) {
+                                errorText = null
+                                onLoginResult(isAdminSelected)
+                            } else {
+                                errorText = "Invalid credentials for ${if (isAdminSelected) "Admin" else "User"}."
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
