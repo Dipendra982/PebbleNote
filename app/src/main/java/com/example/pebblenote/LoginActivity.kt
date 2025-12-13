@@ -80,7 +80,10 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
                     .padding(top = 16.dp, start = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { /* Handle back press */ }) {
+                IconButton(onClick = {
+                    // Navigate back to previous screen
+                    (ctx as? android.app.Activity)?.finish()
+                }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -193,12 +196,24 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
                             )
                         }
 
-                        Text(
-                            text = "Forgot password?",
-                            color = endColor,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "Forgot password?",
+                                color = endColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    ctx.startActivity(android.content.Intent(ctx, ForgotPasswordActivity::class.java))
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Text("Forgot password")
+                            }
+                        }       
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

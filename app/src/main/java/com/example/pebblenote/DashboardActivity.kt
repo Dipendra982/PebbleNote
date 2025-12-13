@@ -16,6 +16,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,15 +39,16 @@ data class PDFItem(
     val views: Int,
     val downloads: Int,
     val likes: Int,
-    val category: String = "Notes"
+    val category: String = "Notes",
+    val description: String = ""
 )
 
 // Dummy data for the dashboard
 private val dummyPDFs = listOf(
-    PDFItem(1, "Ghumgham", "$3.00", 1, 1, 0),
-    PDFItem(2, "fun", "$33.00", 9, 2, 1),
-    PDFItem(3, "photo", "$2.00", 9, 2, 1),
-    PDFItem(4, "Math Notes", "$5.50", 12, 5, 3),
+    PDFItem(1, "Ghumgham", "$3.00", 1, 1, 0, description = "Travel guide notes with tips and routes."),
+    PDFItem(2, "fun", "$33.00", 9, 2, 1, description = "Entertaining reads compiled as study breaks."),
+    PDFItem(3, "photo", "$2.00", 9, 2, 1, description = "Photography basics cheat sheet."),
+    PDFItem(4, "Math Notes", "$5.50", 12, 5, 3, description = "Algebra and calculus quick references."),
 )
 
 class DashboardActivity : ComponentActivity() {
@@ -84,8 +89,11 @@ fun DashboardScreen(
     onProfile: () -> Unit,
     onBuy: (PDFItem) -> Unit
 ) {
+    var detailItem by remember { mutableStateOf<PDFItem?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     Scaffold(
-        topBar = { DashboardTopBar() },
+        topBar = { DashboardTopBar(onLogout = onLogout, onProfile = onProfile) },
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
         LazyColumn(
@@ -106,7 +114,28 @@ fun DashboardScreen(
                 )
             }
             items(pdfs) { pdf ->
-                PDFCard(pdf, onBuy = { onBuy(pdf) }, onViewDetails = { /* show sheet wired below */ })
+                PDFCard(pdf, onBuy = { onBuy(pdf) }, onViewDetails = { detailItem = pdf })
+            }
+        }
+    }
+
+    if (detailItem != null) {
+        ModalBottomSheet(
+            onDismissRequest = { detailItem = null },
+            sheetState = sheetState
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(detailItem!!.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(detailItem!!.description.ifBlank { "No description available." }, fontSize = 14.sp, color = Color.DarkGray)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(onClick = { /* preview images placeholder */ }, label = { Text("Preview Images") }, leadingIcon = { Icon(Icons.Default.Image, contentDescription = null) })
+                    AssistChip(onClick = { /* open sample PDF placeholder */ }, label = { Text("Open Sample") }, leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) })
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { onBuy(detailItem!!); detailItem = null }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) {
+                    Text("Buy Now", color = Color.White)
+                }
             }
         }
     }

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
 
 // NOTE: This file relies on the existence of CustomAuthTextField in your TextFields.kt
@@ -47,6 +48,7 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
 
     // Colors matching the Login page gradient
     val startColor = Color(0xFFF8C1D9) // Light Pink
@@ -63,7 +65,10 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
                     .padding(top = 16.dp, start = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { /* Handle back press */ }) {
+                IconButton(onClick = {
+//                    val ctx = LocalContext.current
+                    (ctx as? android.app.Activity)?.finish()
+                }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",

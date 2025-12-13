@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
 
 // Admin-facing data model
@@ -79,11 +81,27 @@ fun AdminDashboardScreen() {
                     Text("Admin Dashboard", fontWeight = FontWeight.Bold)
                 },
                 actions = {
-                    Text(
-                        text = "Admin",
-                        color = Color(0xFF4CAF50),
-                        modifier = Modifier.padding(end = 12.dp)
-                    )
+                    val ctx = LocalContext.current
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Admin",
+                            color = Color(0xFF4CAF50),
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Text(
+                            text = "Logout",
+                            color = Color(0xFF1976D2),
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .clickable {
+                                    val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                    prefs.edit().clear().apply()
+                                    ctx.startActivity(android.content.Intent(ctx, LoginActivity::class.java).apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    })
+                                }
+                        )
+                    }
                 }
             )
         },

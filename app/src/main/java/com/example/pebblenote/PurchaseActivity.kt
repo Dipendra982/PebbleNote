@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
 
 class PurchaseActivity : ComponentActivity() {
@@ -38,6 +39,7 @@ class PurchaseActivity : ComponentActivity() {
 @Composable
 fun PurchaseScreen(title: String, price: String) {
     var selectedMethod by remember { mutableStateOf("Khalti") }
+    var showSuccess by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Purchase", fontWeight = FontWeight.Bold) }) }
@@ -64,7 +66,7 @@ fun PurchaseScreen(title: String, price: String) {
             }
 
             Button(
-                onClick = { /* TODO: Integrate SDK/UI flow */ },
+                onClick = { showSuccess = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
@@ -74,5 +76,22 @@ fun PurchaseScreen(title: String, price: String) {
                 Text("Pay with $selectedMethod", color = MaterialTheme.colorScheme.onPrimary)
             }
         }
+    }
+
+    if (showSuccess) {
+        AlertDialog(
+            onDismissRequest = { showSuccess = false },
+            title = { Text("Payment Successful") },
+            text = { Text("Your purchase was completed via $selectedMethod.") },
+            confirmButton = {
+                val ctx = LocalContext.current
+                TextButton(onClick = {
+                    showSuccess = false
+                    ctx.startActivity(android.content.Intent(ctx, DashboardActivity::class.java).apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    })
+                }) { Text("OK") }
+            }
+        )
     }
 }
