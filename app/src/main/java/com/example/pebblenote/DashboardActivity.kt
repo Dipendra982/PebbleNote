@@ -95,7 +95,7 @@ fun DashboardTopBar() {
     TopAppBar(
         title = {
             Text(
-                "PebbleNotes",
+                "P",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color.Black
