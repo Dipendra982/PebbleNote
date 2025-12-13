@@ -32,16 +32,25 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PebbleNoteTheme {
-                LoginScreen(onLoggedIn = {
-                    startActivity(android.content.Intent(this, DashboardActivity::class.java))
-                    finish()
-                })
+                LoginScreen(
+                    onNavigateAdmin = {
+                        startActivity(android.content.Intent(this, AdminDashboardActivity::class.java))
+                        finish()
+                    },
+                    onNavigateUser = {
+                        startActivity(android.content.Intent(this, DashboardActivity::class.java))
+                        finish()
+                    }
+                )
             }
         }
     }
 }
 @Composable
-fun LoginScreen(onLoggedIn: () -> Unit = {}) {
+fun LoginScreen(
+    onNavigateAdmin: () -> Unit = {},
+    onNavigateUser: () -> Unit = {}
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -185,8 +194,21 @@ fun LoginScreen(onLoggedIn: () -> Unit = {}) {
                     Spacer(modifier = Modifier.height(32.dp))
 
                     // START OF BUTTON FIX
+                    var errorText by remember { mutableStateOf<String?>(null) }
                     Button(
-                        onClick = { onLoggedIn() },
+                        onClick = {
+                            // Dummy credentials
+                            val adminEmail = "admin@pebble.com"
+                            val adminPass = "Admin123"
+                            val userEmail = "user@pebble.com"
+                            val userPass = "User123"
+
+                            when {
+                                email.equals(adminEmail, ignoreCase = true) && password == adminPass -> onNavigateAdmin()
+                                email.equals(userEmail, ignoreCase = true) && password == userPass -> onNavigateUser()
+                                else -> errorText = "Invalid email or password"
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -204,6 +226,15 @@ fun LoginScreen(onLoggedIn: () -> Unit = {}) {
                             text = "Log In",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    if (errorText != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = errorText!!,
+                            color = Color.Red,
+                            fontSize = 13.sp
                         )
                     }
                     // END OF BUTTON FIX
