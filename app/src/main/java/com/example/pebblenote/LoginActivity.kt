@@ -32,6 +32,16 @@ import com.example.pebblenote.ui.theme.PebbleNoteTheme
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Auto-login if remembered
+        val prefs = getSharedPreferences("pebble_prefs", MODE_PRIVATE)
+        val remembered = prefs.getBoolean("remember_me", false)
+        if (remembered) {
+            val isAdmin = prefs.getBoolean("is_admin", false)
+            val dest = if (isAdmin) AdminDashboardActivity::class.java else DashboardActivity::class.java
+            startActivity(android.content.Intent(this, dest))
+            finish()
+            return
+        }
         setContent {
             PebbleNoteTheme {
                 LoginScreen(
@@ -239,6 +249,19 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
                             }
 
                             if (ok) {
+                                // Persist remember me
+                                val ctx = androidx.compose.ui.platform.LocalContext.current
+                                if (rememberMeChecked) {
+                                    val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                    prefs.edit()
+                                        .putBoolean("remember_me", true)
+                                        .putBoolean("is_admin", isAdminSelected)
+                                        .putString("email", email)
+                                        .apply()
+                                } else {
+                                    val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                    prefs.edit().clear().apply()
+                                }
                                 errorText = null
                                 onLoginResult(isAdminSelected)
                             } else {

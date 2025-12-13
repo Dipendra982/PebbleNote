@@ -1,5 +1,6 @@
 package com.example.pebblenote
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -50,7 +51,26 @@ class DashboardActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PebbleNoteTheme {
-                DashboardScreen(dummyPDFs)
+                DashboardScreen(dummyPDFs,
+                    onLogout = {
+                        // Clear remember me and session
+                        val prefs = getSharedPreferences("pebble_prefs", MODE_PRIVATE)
+                        prefs.edit().clear().apply()
+                        // Navigate to Login and clear back stack
+                        val intent = Intent(this, LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                    },
+                    onProfile = {
+                        startActivity(Intent(this, ProfileActivity::class.java))
+                    },
+                    onBuy = { item ->
+                        val intent = Intent(this, PurchaseActivity::class.java)
+                        intent.putExtra("title", item.title)
+                        intent.putExtra("price", item.price)
+                        startActivity(intent)
+                    }
+                )
             }
         }
     }
@@ -58,7 +78,12 @@ class DashboardActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(pdfs: List<PDFItem>) {
+fun DashboardScreen(
+    pdfs: List<PDFItem>,
+    onLogout: () -> Unit,
+    onProfile: () -> Unit,
+    onBuy: (PDFItem) -> Unit
+) {
     Scaffold(
         topBar = { DashboardTopBar() },
         containerColor = Color(0xFFF5F5F5)
@@ -71,8 +96,6 @@ fun DashboardScreen(pdfs: List<PDFItem>) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { DashboardWelcomeHeader() }
-            item { StatsRow() }
-            item { UploadButton() }
             item {
                 Text(
                     text = "Your PDFs & Notes",
@@ -83,7 +106,7 @@ fun DashboardScreen(pdfs: List<PDFItem>) {
                 )
             }
             items(pdfs) { pdf ->
-                PDFCard(pdf)
+                PDFCard(pdf, onBuy = { onBuy(pdf) }, onViewDetails = { /* show sheet wired below */ })
             }
         }
     }
@@ -91,11 +114,11 @@ fun DashboardScreen(pdfs: List<PDFItem>) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardTopBar() {
+fun DashboardTopBar(onLogout: () -> Unit = {}, onProfile: () -> Unit = {}) {
     TopAppBar(
         title = {
             Text(
-                "P",
+                "PebbleNote",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color.Black
@@ -108,7 +131,7 @@ fun DashboardTopBar() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "to test one",
+                    text = "test one",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -116,12 +139,14 @@ fun DashboardTopBar() {
                     text = "Logout",
                     fontSize = 12.sp,
                     color = Color(0xFF1976D2),
-                    modifier = Modifier.clickable { /* Handle logout */ }
+                    modifier = Modifier.clickable { onLogout() }
                 )
                 Icon(
                     Icons.Default.AccountCircle,
                     contentDescription = "Profile",
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable { onProfile() },
                     tint = Color(0xFF1976D2)
                 )
                 Box(
@@ -160,102 +185,14 @@ fun DashboardWelcomeHeader() {
     }
 }
 
-@Composable
-fun StatsRow() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        StatCard(Icons.Default.Image, "Total PDFs", "3", Color(0xFFE0F7FA))
-        StatCard(Icons.Default.Visibility, "Total Views", "3", Color(0xFFE3F2FD))
-        StatCard(Icons.Default.AttachMoney, "Total Earnings", "$0.00", Color(0xFFE8F5E9))
-        StatCard(Icons.Default.Favorite, "Total Likes", "0", Color(0xFFFFEBEE))
-        StatCard(Icons.Default.Download, "Total Downloads", "3", Color(0xFFF3E5F5))
-    }
-}
+// Stats removed for user dashboard to keep UI clean
+
+// StatCard removed
+
+// Upload button removed for end-user dashboard
 
 @Composable
-fun StatCard(icon: ImageVector, title: String, value: String, backgroundColor: Color) {
-    Card(
-        modifier = Modifier
-            .width(140.dp)
-            .height(100.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = value,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Text(
-                        text = title,
-                        fontSize = 10.sp,
-                        color = Color.Gray,
-                        lineHeight = 12.sp
-                    )
-                }
-                Icon(
-                    icon,
-                    contentDescription = title,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(backgroundColor)
-                        .padding(4.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun UploadButton() {
-    Button(
-        onClick = { /* Handle upload */ },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)),
-        shape = RoundedCornerShape(8.dp),
-        contentPadding = PaddingValues(12.dp)
-    ) {
-        Icon(
-            Icons.Default.Add,
-            contentDescription = "Upload",
-            modifier = Modifier.size(20.dp),
-            tint = Color.White
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            "Upload New PDF",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White
-        )
-    }
-}
-
-@Composable
-fun PDFCard(pdf: PDFItem) {
+fun PDFCard(pdf: PDFItem, onBuy: () -> Unit, onViewDetails: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -326,13 +263,24 @@ fun PDFCard(pdf: PDFItem) {
 
             Spacer(Modifier.height(12.dp))
 
-            // Action Buttons
+            // End-user actions: view details and purchase
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { /* Handle Edit */ },
+                    onClick = onViewDetails,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)),
+                    shape = RoundedCornerShape(6.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text("View Details", fontSize = 14.sp, color = Color.White)
+                }
+                Button(
+                    onClick = onBuy,
                     modifier = Modifier
                         .weight(1f)
                         .height(40.dp),
@@ -340,32 +288,7 @@ fun PDFCard(pdf: PDFItem) {
                     shape = RoundedCornerShape(6.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.White
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text("Edit", fontSize = 14.sp, color = Color.White)
-                }
-                Button(
-                    onClick = { /* Handle Delete */ },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.White
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text("Delete", fontSize = 14.sp, color = Color.White)
+                    Text("Buy Now", fontSize = 14.sp, color = Color.White)
                 }
             }
         }
@@ -392,6 +315,11 @@ fun StatIconText(icon: ImageVector, text: String, color: Color) {
 @Composable
 fun DashboardScreenPreview() {
     PebbleNoteTheme {
-        DashboardScreen(dummyPDFs)
+        DashboardScreen(
+            dummyPDFs,
+            onLogout = TODO(),
+            onProfile = TODO(),
+            onBuy = TODO()
+        )
     }
 }

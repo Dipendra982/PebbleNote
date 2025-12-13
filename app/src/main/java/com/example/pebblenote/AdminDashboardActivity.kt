@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,6 +100,19 @@ fun AdminDashboardScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Insights cards
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    InsightCard(Icons.Default.Description, "Total Notes", notes.size.toString(), Color(0xFFE0F7FA), modifier = Modifier.weight(1f))
+                    InsightCard(Icons.Default.ShoppingCart, "Total Sales", "0", Color(0xFFE3F2FD), modifier = Modifier.weight(1f))
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    InsightCard(Icons.Default.AttachMoney, "Revenue", "$0.00", Color(0xFFE8F5E9), modifier = Modifier.weight(1f))
+                    InsightCard(Icons.Default.Group, "Active Users", "0", Color(0xFFFFF3E0), modifier = Modifier.weight(1f))
+                }
+            }
             items(notes, key = { it.id }) { note ->
                 AdminNoteCard(
                     note = note,
@@ -153,6 +166,23 @@ fun AdminDashboardScreen() {
                 TextButton(onClick = { noteToDelete = null }) { Text("Cancel") }
             }
         )
+    }
+}
+
+@Composable
+private fun InsightCard(icon: ImageVector, title: String, value: String, bg: Color, modifier: Modifier = Modifier) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(12.dp), modifier = modifier) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text(value, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(title, fontSize = 12.sp, color = Color.Gray)
+            }
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(bg)
+                .padding(4.dp))
+        }
     }
 }
 
