@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "94455988988",
+    "project_id": "pebblenote-196aa",
+    "storage_bucket": "pebblenote-196aa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94455988988:android:8b66dedeb001f44e920d79",
+        "android_client_info": {
+          "package_name": "com.example.pebblenote"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIZjiybOcfKYEnYI1PowxLLKg22EDWa0w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

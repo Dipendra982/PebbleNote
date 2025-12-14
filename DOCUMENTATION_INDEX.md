@@ -10,6 +10,7 @@
 4. **[ARCHITECTURE.md](ARCHITECTURE.md)** ← Technical details (15 min read)
 5. **[ANALYSIS_REPORT.md](ANALYSIS_REPORT.md)** ← In-depth analysis (20 min read)
 6. **[FINAL_VERIFICATION.md](FINAL_VERIFICATION.md)** ← Quality assurance (10 min read)
+7. **[FIREBASE_INTEGRATION.md](FIREBASE_INTEGRATION.md)** ← Auth + Database integration (7 min read)
 
 ---
 
@@ -166,9 +167,11 @@ PebbleNote/
 
 ### "I want to understand the full project"
 → [README.md](README.md) (10 min)
+→ [FIREBASE_INTEGRATION.md](FIREBASE_INTEGRATION.md) (7 min)
 
 ### "I need to understand how everything works"
 → [ARCHITECTURE.md](ARCHITECTURE.md) (15 min)
+→ [FIREBASE_INTEGRATION.md](FIREBASE_INTEGRATION.md) — Data flows (7 min)
 
 ### "I need detailed technical information"
 → [ANALYSIS_REPORT.md](ANALYSIS_REPORT.md) (20 min)
@@ -191,7 +194,8 @@ PebbleNote/
 | ARCHITECTURE.md | 5 | 2,000 | Architects | 15 min |
 | ANALYSIS_REPORT.md | 6 | 2,500 | Tech Leads | 20 min |
 | FINAL_VERIFICATION.md | 5 | 2,100 | QA | 10 min |
-| **TOTAL** | **26** | **10,200** | Various | 65 min |
+| FIREBASE_INTEGRATION.md | 2 | 700 | Developers | 7 min |
+| **TOTAL** | **28** | **10,900** | Various | 72 min |
 
 ---
 

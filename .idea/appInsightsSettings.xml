@@ -9,10 +9,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.example.pebblenote" />
+                  <option name="mobileSdkAppId" value="1:94455988988:android:8b66dedeb001f44e920d79" />
+                  <option name="projectId" value="pebblenote-196aa" />
+                  <option name="projectNumber" value="94455988988" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
