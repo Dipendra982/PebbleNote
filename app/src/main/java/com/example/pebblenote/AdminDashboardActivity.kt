@@ -56,21 +56,83 @@ class AdminDashboardActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen() {
-    // Admin-only access gate (replace with real auth)
-    val isAdmin = remember { true }
+    val notes = remember { mutableStateListOf<AdminNote>() }
+    val ctxState = rememberUpdatedState(LocalContext.current)
 
-    // In-memory demo list; replace with ViewModel + Repository
-    val notes = remember { mutableStateListOf(
-        AdminNote(1, "Ghumgham", 3.0),
-        AdminNote(2, "fun", 33.0),
-        AdminNote(3, "photo", 2.0),
-    ) }
+    // Properly manage Firebase listeners and support both "notes" and "Notes" paths
+    DisposableEffect(Unit) {
+        val db = FirebaseDatabase.getInstance().reference
+        val lowerRef = db.child("notes")
+        val upperRef = db.child("Notes")
+        // Sync for fast repopulation (works even without persistence enabled)
+        lowerRef.keepSynced(true)
+        upperRef.keepSynced(true)
+
+        fun snapshotToNotes(snapshot: com.google.firebase.database.DataSnapshot): List<AdminNote> {
+            val list = mutableListOf<AdminNote>()
+            for (child in snapshot.children) {
+                try {
+                    val id = child.child("id").getValue(Number::class.java)?.toInt()
+                        ?: (child.key?.toIntOrNull() ?: 0)
+                    val title = child.child("title").getValue(String::class.java) ?: "Untitled"
+                    val price = child.child("price").getValue(Number::class.java)?.toDouble() ?: 0.0
+                    val pdfUri = child.child("pdfUri").getValue(String::class.java)
+                        ?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+                    val previews = buildList {
+                        child.child("previewImageUris").children.forEach { p ->
+                            p.getValue(String::class.java)?.takeIf { it.isNotBlank() }?.let { add(Uri.parse(it)) }
+                        }
+                    }
+                    val category = child.child("category").getValue(String::class.java) ?: "General"
+                    val description = child.child("description").getValue(String::class.java) ?: ""
+                    val enabled = child.child("enabled").getValue(Boolean::class.java) ?: true
+                    list.add(AdminNote(id, title, price, pdfUri, previews, category, description, enabled))
+                } catch (_: Exception) { /* skip malformed */ }
+            }
+            return list
+        }
+
+        fun mergeAndSet(a: List<AdminNote>, b: List<AdminNote>) {
+            val map = LinkedHashMap<Int, AdminNote>()
+            a.forEach { map[it.id] = it }
+            b.forEach { map[it.id] = it }
+            notes.clear()
+            notes.addAll(map.values.sortedBy { it.id })
+        }
+
+        var lowerList: List<AdminNote> = emptyList()
+        var upperList: List<AdminNote> = emptyList()
+
+        val lowerListener = object : com.google.firebase.database.ValueEventListener {
+            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                lowerList = snapshotToNotes(snapshot)
+                mergeAndSet(lowerList, upperList)
+            }
+            override fun onCancelled(error: com.google.firebase.database.DatabaseError) { /* no-op */ }
+        }
+
+        val upperListener = object : com.google.firebase.database.ValueEventListener {
+            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                upperList = snapshotToNotes(snapshot)
+                mergeAndSet(lowerList, upperList)
+            }
+            override fun onCancelled(error: com.google.firebase.database.DatabaseError) { /* no-op */ }
+        }
+
+        lowerRef.addValueEventListener(lowerListener)
+        upperRef.addValueEventListener(upperListener)
+
+        onDispose {
+            lowerRef.removeEventListener(lowerListener)
+            upperRef.removeEventListener(upperListener)
+        }
+    }
 
     var editingNote by remember { mutableStateOf<AdminNote?>(null) }
     var showUploadDialog by remember { mutableStateOf(false) }
     var noteToDelete by remember { mutableStateOf<AdminNote?>(null) }
 
-    if (!isAdmin) {
+    if (!true) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Admins only", style = MaterialTheme.typography.titleMedium)
         }
@@ -84,7 +146,6 @@ fun AdminDashboardScreen() {
                     Text("Admin Dashboard", fontWeight = FontWeight.Bold)
                 },
                 actions = {
-                    val ctx = LocalContext.current
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Admin",
@@ -97,10 +158,17 @@ fun AdminDashboardScreen() {
                             modifier = Modifier
                                 .padding(end = 12.dp)
                                 .clickable {
-                                    val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
-                                    prefs.edit().clear().apply()
-                                    ctx.startActivity(android.content.Intent(ctx, LoginActivity::class.java).apply {
-                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    val ctx = ctxState.value
+                                    // Clear any session/prefs you use
+                                    ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                        .edit().clear().apply()
+
+                                    // Finish current screen so listeners dispose
+                                    (ctx as? ComponentActivity)?.finish()
+
+                                    // Go to login with a fresh task
+                                    ctx.startActivity(Intent(ctx, LoginActivity::class.java).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                                     })
                                 }
                         )
@@ -123,15 +191,66 @@ fun AdminDashboardScreen() {
         ) {
             // Insights cards
             item {
+                val sales = remember { mutableStateOf(0) }
+                val revenue = remember { mutableStateOf(0.0) }
+                LaunchedEffect(Unit) {
+                    val purchasesRef = FirebaseDatabase.getInstance().reference.child("purchases")
+                    purchasesRef.addListenerForSingleValueEvent(object : com.google.firebase.database.ValueEventListener {
+                        override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                            var count = 0
+                            var total = 0.0
+                            snapshot.children.forEach { userNode ->
+                                userNode.children.forEach { p ->
+                                    count += 1
+                                    val priceStr = p.child("price").getValue(String::class.java) ?: "Rs 0.00"
+                                    // parse Rs price
+                                    val numeric = priceStr.replace("Rs", "").trim().replace(",", "")
+                                    total += numeric.toDoubleOrNull() ?: 0.0
+                                }
+                            }
+                            sales.value = count
+                            revenue.value = total
+                        }
+
+                        override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
+                    })
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     InsightCard(Icons.Default.Description, "Total Notes", notes.size.toString(), Color(0xFFE0F7FA), modifier = Modifier.weight(1f))
-                    InsightCard(Icons.Default.ShoppingCart, "Total Sales", "0", Color(0xFFE3F2FD), modifier = Modifier.weight(1f))
+                    InsightCard(Icons.Default.ShoppingCart, "Total Sales", sales.value.toString(), Color(0xFFE3F2FD), modifier = Modifier.weight(1f))
                 }
             }
             item {
+                val revenue = remember { mutableStateOf(0.0) }
+                LaunchedEffect(Unit) {
+                    val purchasesRef = FirebaseDatabase.getInstance().reference.child("purchases")
+                    purchasesRef.addListenerForSingleValueEvent(object : com.google.firebase.database.ValueEventListener {
+                        override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                            var total = 0.0
+                            snapshot.children.forEach { userNode ->
+                                userNode.children.forEach { p ->
+                                    val priceStr = p.child("price").getValue(String::class.java) ?: "Rs 0.00"
+                                    // parse Rs price
+                                    val numeric = priceStr.replace("Rs", "").trim().replace(",", "")
+                                    total += numeric.toDoubleOrNull() ?: 0.0
+                                }
+                            }
+                            revenue.value = total
+                        }
+
+                        override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
+                    })
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    InsightCard(Icons.Default.AttachMoney, "Revenue", "$0.00", Color(0xFFE8F5E9), modifier = Modifier.weight(1f))
-                    InsightCard(Icons.Default.Group, "Active Users", "0", Color(0xFFFFF3E0), modifier = Modifier.weight(1f))
+                    InsightCard(Icons.Default.AttachMoney, "Revenue", "Rs ${String.format("%.2f", revenue.value)}", Color(0xFFE8F5E9), modifier = Modifier.weight(1f))
+                    InsightCard(Icons.Default.Group, "Active Users", "-", Color(0xFFFFF3E0), modifier = Modifier.weight(1f))
+                }
+            }
+            if (notes.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                        Text("No notes yet", color = Color.Gray)
+                    }
                 }
             }
             items(notes, key = { it.id }) { note ->
@@ -142,6 +261,7 @@ fun AdminDashboardScreen() {
                     onToggleEnabled = {
                         it.enabled = !it.enabled
                         // Persist toggle
+                        // Write to lower-case path by default
                         val ref = FirebaseDatabase.getInstance().reference.child("notes").child(it.id.toString())
                         ref.child("enabled").setValue(it.enabled)
                     }
@@ -184,8 +304,7 @@ fun AdminDashboardScreen() {
             onSubmit = { newNote ->
                 val nextId = (notes.maxOfOrNull { it.id } ?: 0) + 1
                 val created = newNote.copy(id = nextId)
-                notes.add(created)
-                // Persist create to Firebase
+                // Persist create to Firebase then update local on success
                 val ref = FirebaseDatabase.getInstance().reference.child("notes").child(nextId.toString())
                 val data = mapOf(
                     "id" to created.id,
@@ -197,8 +316,16 @@ fun AdminDashboardScreen() {
                     "description" to created.description,
                     "enabled" to created.enabled
                 )
-                ref.setValue(data)
-                showUploadDialog = false
+                ref.setValue(data).addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        // listener will also refresh, but add locally for instant feedback
+                        notes.add(created)
+                        showUploadDialog = false
+                        android.widget.Toast.makeText(ctxState.value, "Note uploaded", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        android.widget.Toast.makeText(ctxState.value, it.exception?.localizedMessage ?: "Upload failed", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         )
     }
@@ -211,11 +338,17 @@ fun AdminDashboardScreen() {
             text = { Text("This action cannot be undone.") },
             confirmButton = {
                 TextButton(onClick = {
-                    notes.removeAll { it.id == toDelete.id }
                     // Persist delete
                     val ref = FirebaseDatabase.getInstance().reference.child("notes").child(toDelete.id.toString())
-                    ref.removeValue()
-                    noteToDelete = null
+                    ref.removeValue().addOnCompleteListener {
+                        if (it.isSuccessful) {
+                            notes.removeAll { it.id == toDelete.id }
+                            android.widget.Toast.makeText(ctxState.value, "Note deleted", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            android.widget.Toast.makeText(ctxState.value, it.exception?.localizedMessage ?: "Delete failed", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                        noteToDelete = null
+                    }
                 }) { Text("Delete", color = Color(0xFFF44336)) }
             },
             dismissButton = {

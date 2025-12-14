@@ -50,20 +50,14 @@ data class PDFItem(
     val previewImageUri: String? = null
 )
 
-// Dummy data for the dashboard
-private val dummyPDFs = listOf(
-    PDFItem(1, "Ghumgham", "Rs 3.00", 1, 1, 0, description = "Travel guide notes with tips and routes."),
-    PDFItem(2, "fun", "Rs 33.00", 9, 2, 1, description = "Entertaining reads compiled as study breaks."),
-    PDFItem(3, "photo", "Rs 2.00", 9, 2, 1, description = "Photography basics cheat sheet."),
-    PDFItem(4, "Math Notes", "Rs 5.50", 12, 5, 3, description = "Algebra and calculus quick references."),
-)
+// No dummy data; live data only from Firebase
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             PebbleNoteTheme {
-                var pdfs by remember { mutableStateOf(dummyPDFs) }
+                var pdfs by remember { mutableStateOf(emptyList<PDFItem>()) }
 
                 // Load from Firebase Realtime Database `/notes`
                 LaunchedEffect(Unit) {
@@ -96,7 +90,7 @@ class DashboardActivity : ComponentActivity() {
                                     list.add(PDFItem(id, title, price, views, downloads, likes, category, description, previewUri))
                                 } catch (_: Exception) { /* skip bad rows */ }
                             }
-                            pdfs = if (list.isNotEmpty()) list else dummyPDFs
+                            pdfs = list
                         }
 
                         override fun onCancelled(error: DatabaseError) {
@@ -417,15 +411,15 @@ fun StatIconText(icon: ImageVector, text: String, color: Color) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
-@Composable
-fun DashboardScreenPreview() {
-    PebbleNoteTheme {
-        DashboardScreen(
-            dummyPDFs,
-            onLogout = TODO(),
-            onProfile = TODO(),
-            onBuy = TODO()
-        )
-    }
-}
+//@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
+//@Composable
+//fun DashboardScreenPreview() {
+//    PebbleNoteTheme {
+//        DashboardScreen(
+//            dummyPDFs,
+//            onLogout = TODO(),
+//            onProfile = TODO(),
+//            onBuy = TODO()
+//        )
+//    }
+//}
