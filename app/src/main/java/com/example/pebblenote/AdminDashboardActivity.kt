@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
 import com.google.firebase.database.FirebaseDatabase
 import android.content.Intent
+import androidx.compose.ui.tooling.preview.Preview
 
 // Admin-facing data model
 data class AdminNote(
@@ -257,8 +258,8 @@ private fun AdminNoteCard(
         Column(Modifier.padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(Modifier.weight(1f)) {
-                    Text(note.title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                    Text("$${String.format("%.2f", note.price)}", color = Color(0xFF1976D2))
+                    Text(note.title, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text("Rs ${String.format("%.2f", note.price)}", color = Color(0xFF1976D2), fontSize = 13.sp)
                     Text(if (note.enabled) "Enabled" else "Disabled", color = if (note.enabled) Color(0xFF4CAF50) else Color.Gray, fontSize = 12.sp)
                 }
                 Icon(
@@ -268,7 +269,7 @@ private fun AdminNoteCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF0F0F0))
+                        .background(Color(0xFFFFFFFF))
                         .padding(8.dp)
                 )
             }
@@ -279,17 +280,17 @@ private fun AdminNoteCard(
                 OutlinedButton(onClick = { onEdit(note) }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Default.Edit, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Edit")
+                    Text("Edit", fontSize = 14.sp)
                 }
                 OutlinedButton(onClick = { onToggleEnabled(note) }, modifier = Modifier.weight(1f)) {
                     Icon(if (note.enabled) Icons.Default.Block else Icons.Default.Check, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text(if (note.enabled) "Disable" else "Enable")
+                    Text(if (note.enabled) "Disable" else "Enable", fontSize = 14.sp)
                 }
                 OutlinedButton(onClick = { onDelete(note) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336))) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Delete")
+                    Text("Delete", fontSize = 14.sp)
                 }
             }
         }
@@ -427,4 +428,12 @@ private fun UploadNoteDialog(
         },
         dismissButton = { TextButton(enabled = !uploading, onClick = onDismiss) { Text("Cancel") } }
     )
+}
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun AdminDashboardActivityPreview() {
+    PebbleNoteTheme {
+        AdminDashboardScreen()
+    }
 }

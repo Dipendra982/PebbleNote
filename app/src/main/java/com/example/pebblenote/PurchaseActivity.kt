@@ -30,7 +30,7 @@ class PurchaseActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val noteId = intent.getIntExtra("noteId", 0)
         val title = intent.getStringExtra("title") ?: "Note"
-        val price = intent.getStringExtra("price") ?: "$0.00"
+        val price = intent.getStringExtra("price") ?: "Rs 0.00"
         setContent {
             PebbleNoteTheme {
                 PurchaseScreen(noteId, title, price)

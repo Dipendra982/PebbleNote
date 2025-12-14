@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,15 +46,16 @@ data class PDFItem(
     val downloads: Int,
     val likes: Int,
     val category: String = "Notes",
-    val description: String = ""
+    val description: String = "",
+    val previewImageUri: String? = null
 )
 
 // Dummy data for the dashboard
 private val dummyPDFs = listOf(
-    PDFItem(1, "Ghumgham", "$3.00", 1, 1, 0, description = "Travel guide notes with tips and routes."),
-    PDFItem(2, "fun", "$33.00", 9, 2, 1, description = "Entertaining reads compiled as study breaks."),
-    PDFItem(3, "photo", "$2.00", 9, 2, 1, description = "Photography basics cheat sheet."),
-    PDFItem(4, "Math Notes", "$5.50", 12, 5, 3, description = "Algebra and calculus quick references."),
+    PDFItem(1, "Ghumgham", "Rs 3.00", 1, 1, 0, description = "Travel guide notes with tips and routes."),
+    PDFItem(2, "fun", "Rs 33.00", 9, 2, 1, description = "Entertaining reads compiled as study breaks."),
+    PDFItem(3, "photo", "Rs 2.00", 9, 2, 1, description = "Photography basics cheat sheet."),
+    PDFItem(4, "Math Notes", "Rs 5.50", 12, 5, 3, description = "Algebra and calculus quick references."),
 )
 
 class DashboardActivity : ComponentActivity() {
@@ -76,16 +78,22 @@ class DashboardActivity : ComponentActivity() {
                                     val title = child.child("title").getValue(String::class.java) ?: "Untitled"
                                     val priceVal = child.child("price").getValue(Any::class.java)
                                     val price = when (priceVal) {
-                                        is Number -> "$${String.format("%.2f", priceVal.toDouble())}"
+                                        is Number -> "Rs ${String.format("%.2f", priceVal.toDouble())}"
                                         is String -> priceVal
                                         else -> "$0.00"
+                                    }
+                                    var previewUri: String? = null
+                                    val previewsNode = child.child("previewImageUris")
+                                    if (previewsNode.exists()) {
+                                        // pick first preview image uri if present
+                                        previewsNode.children.firstOrNull()?.getValue(String::class.java)?.let { previewUri = it }
                                     }
                                     val views = (child.child("views").getValue(Number::class.java)?.toInt()) ?: 0
                                     val downloads = (child.child("downloads").getValue(Number::class.java)?.toInt()) ?: 0
                                     val likes = (child.child("likes").getValue(Number::class.java)?.toInt()) ?: 0
                                     val category = child.child("category").getValue(String::class.java) ?: "Notes"
                                     val description = child.child("description").getValue(String::class.java) ?: ""
-                                    list.add(PDFItem(id, title, price, views, downloads, likes, category, description))
+                                    list.add(PDFItem(id, title, price, views, downloads, likes, category, description, previewUri))
                                 } catch (_: Exception) { /* skip bad rows */ }
                             }
                             pdfs = if (list.isNotEmpty()) list else dummyPDFs
@@ -282,12 +290,39 @@ fun PDFCard(pdf: PDFItem, onBuy: () -> Unit, onViewDetails: () -> Unit) {
                     .background(Color(0xFFF0F0F0)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Description,
-                    contentDescription = "PDF",
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.Gray
-                )
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                val preview = pdf.previewImageUri
+                if (preview != null) {
+                    val bmp = try {
+                        val uri = android.net.Uri.parse(preview)
+                        ctx.contentResolver.openInputStream(uri)?.use { stream ->
+                            android.graphics.BitmapFactory.decodeStream(stream)
+                        }
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (bmp != null) {
+                        androidx.compose.foundation.Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = "Preview",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = "Preview",
+                            modifier = Modifier.size(48.dp),
+                            tint = Color.Gray
+                        )
+                    }
+                } else {
+                    Icon(
+                        Icons.Default.Description,
+                        contentDescription = "PDF",
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray
+                    )
+                }
             }
 
             Spacer(Modifier.height(8.dp))
