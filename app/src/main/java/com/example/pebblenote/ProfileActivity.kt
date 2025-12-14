@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
+import android.widget.Toast
+import android.content.Intent
 
 class ProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +64,9 @@ fun ProfileScreen() {
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
+            try {
+                ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {}
             avatarUri = uri.toString()
             avatarBitmap = try {
                 ctx.contentResolver.openInputStream(uri)?.use { stream ->
@@ -135,6 +140,7 @@ fun ProfileScreen() {
                         prefs.edit().putString("profile_avatar_uri", avatarUri).apply()
                     }
                     saving = false
+                    Toast.makeText(ctx, "Profile saved", Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),

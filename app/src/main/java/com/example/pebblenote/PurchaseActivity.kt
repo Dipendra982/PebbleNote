@@ -21,15 +21,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
+import android.widget.Toast
 
 class PurchaseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val noteId = intent.getIntExtra("noteId", 0)
         val title = intent.getStringExtra("title") ?: "Note"
         val price = intent.getStringExtra("price") ?: "$0.00"
         setContent {
             PebbleNoteTheme {
-                PurchaseScreen(title, price)
+                PurchaseScreen(noteId, title, price)
             }
         }
     }
@@ -37,9 +41,10 @@ class PurchaseActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PurchaseScreen(title: String, price: String) {
+fun PurchaseScreen(noteId: Int, title: String, price: String) {
     var selectedMethod by remember { mutableStateOf("Khalti") }
     var showSuccess by remember { mutableStateOf(false) }
+    val ctx = LocalContext.current
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Purchase", fontWeight = FontWeight.Bold) }) }
@@ -66,7 +71,27 @@ fun PurchaseScreen(title: String, price: String) {
             }
 
             Button(
-                onClick = { showSuccess = true },
+                onClick = {
+                    val uid = FirebaseAuth.getInstance().currentUser?.uid
+                    if (uid != null) {
+                        val ts = System.currentTimeMillis().toString()
+                        val ref = FirebaseDatabase.getInstance().reference.child("purchases").child(uid).child(ts)
+                        val data = mapOf(
+                            "noteId" to noteId,
+                            "title" to title,
+                            "price" to price,
+                            "method" to selectedMethod,
+                            "status" to "success",
+                            "timestamp" to ts
+                        )
+                        ref.setValue(data).addOnCompleteListener {
+                            if (!it.isSuccessful) {
+                                Toast.makeText(ctx, it.exception?.localizedMessage ?: "Failed to record purchase", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    showSuccess = true
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
@@ -84,7 +109,6 @@ fun PurchaseScreen(title: String, price: String) {
             title = { Text("Payment Successful") },
             text = { Text("Your purchase was completed via $selectedMethod.") },
             confirmButton = {
-                val ctx = LocalContext.current
                 TextButton(onClick = {
                     showSuccess = false
                     ctx.startActivity(android.content.Intent(ctx, DashboardActivity::class.java).apply {
