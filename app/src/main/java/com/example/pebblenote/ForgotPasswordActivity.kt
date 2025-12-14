@@ -18,6 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class ForgotPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,8 +84,15 @@ fun ForgotPasswordScreen(onFinished: () -> Unit = {}) {
                     if (email.isBlank()) {
                         infoText = "Please enter your email."
                     } else {
-                        otpSent = true
-                        infoText = "An OTP has been sent to your email."
+                        FirebaseAuth.getInstance().sendPasswordResetEmail(email.trim())
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    otpSent = true
+                                    infoText = "Password reset email sent. Check your inbox."
+                                } else {
+                                    infoText = task.exception?.localizedMessage ?: "Failed to send reset email."
+                                }
+                            }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -122,12 +130,13 @@ fun ForgotPasswordScreen(onFinished: () -> Unit = {}) {
 
                 Button(
                     onClick = {
-                        if (otpCode.isBlank() || newPassword.isBlank() || confirmPassword.isBlank()) {
+                        if (newPassword.isBlank() || confirmPassword.isBlank()) {
                             infoText = "Please fill all fields."
                         } else if (newPassword != confirmPassword) {
                             infoText = "Passwords do not match."
                         } else {
-                            infoText = "Password reset successful."
+                            // In email reset flow, user resets via email link; here we just close.
+                            infoText = "If you received the email, follow the link to reset."
                             onFinished()
                         }
                     },

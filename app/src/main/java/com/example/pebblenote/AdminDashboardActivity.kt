@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
+import com.google.firebase.database.FirebaseDatabase
+import android.content.Intent
 
 // Admin-facing data model
 data class AdminNote(
@@ -136,7 +138,12 @@ fun AdminDashboardScreen() {
                     note = note,
                     onEdit = { editingNote = it.copy() },
                     onDelete = { noteToDelete = it },
-                    onToggleEnabled = { it.enabled = !it.enabled }
+                    onToggleEnabled = {
+                        it.enabled = !it.enabled
+                        // Persist toggle
+                        val ref = FirebaseDatabase.getInstance().reference.child("notes").child(it.id.toString())
+                        ref.child("enabled").setValue(it.enabled)
+                    }
                 )
             }
             item { Spacer(Modifier.height(64.dp)) }
@@ -151,6 +158,19 @@ fun AdminDashboardScreen() {
             onSave = { updated ->
                 val index = notes.indexOfFirst { it.id == updated.id }
                 if (index >= 0) notes[index] = updated
+                // Persist edit to Firebase
+                val ref = FirebaseDatabase.getInstance().reference.child("notes").child(updated.id.toString())
+                val data = mapOf(
+                    "id" to updated.id,
+                    "title" to updated.title,
+                    "price" to updated.price,
+                    "pdfUri" to (updated.pdfUri?.toString() ?: ""),
+                    "previewImageUris" to updated.previewImageUris.map { it.toString() },
+                    "category" to updated.category,
+                    "description" to updated.description,
+                    "enabled" to updated.enabled
+                )
+                ref.setValue(data)
                 editingNote = null
             }
         )
@@ -162,7 +182,21 @@ fun AdminDashboardScreen() {
             onDismiss = { showUploadDialog = false },
             onSubmit = { newNote ->
                 val nextId = (notes.maxOfOrNull { it.id } ?: 0) + 1
-                notes.add(newNote.copy(id = nextId))
+                val created = newNote.copy(id = nextId)
+                notes.add(created)
+                // Persist create to Firebase
+                val ref = FirebaseDatabase.getInstance().reference.child("notes").child(nextId.toString())
+                val data = mapOf(
+                    "id" to created.id,
+                    "title" to created.title,
+                    "price" to created.price,
+                    "pdfUri" to (created.pdfUri?.toString() ?: ""),
+                    "previewImageUris" to created.previewImageUris.map { it.toString() },
+                    "category" to created.category,
+                    "description" to created.description,
+                    "enabled" to created.enabled
+                )
+                ref.setValue(data)
                 showUploadDialog = false
             }
         )
@@ -177,6 +211,9 @@ fun AdminDashboardScreen() {
             confirmButton = {
                 TextButton(onClick = {
                     notes.removeAll { it.id == toDelete.id }
+                    // Persist delete
+                    val ref = FirebaseDatabase.getInstance().reference.child("notes").child(toDelete.id.toString())
+                    ref.removeValue()
                     noteToDelete = null
                 }) { Text("Delete", color = Color(0xFFF44336)) }
             },
@@ -273,11 +310,24 @@ private fun EditNoteDialog(
     var category by remember(draft.id) { mutableStateOf(draft.category) }
     var description by remember(draft.id) { mutableStateOf(draft.description) }
 
+    val context = LocalContext.current
     val pickPdf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) pdfUri = uri
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {}
+            pdfUri = uri
+        }
     }
     val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris != null) images = uris
+        if (uris != null) {
+            images = uris
+            uris.forEach {
+                try {
+                    context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     AlertDialog(
@@ -324,11 +374,24 @@ private fun UploadNoteDialog(
     var description by remember { mutableStateOf("") }
     var uploading by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val pickPdf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) pdfUri = uri
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {}
+            pdfUri = uri
+        }
     }
     val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris != null) images = uris
+        if (uris != null) {
+            images = uris
+            uris.forEach {
+                try {
+                    context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     AlertDialog(

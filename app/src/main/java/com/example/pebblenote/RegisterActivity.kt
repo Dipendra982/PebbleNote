@@ -1,6 +1,12 @@
 package com.example.pebblenote
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.util.Patterns
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -33,7 +39,7 @@ class RegistrationActivity : ComponentActivity() {
         setContent {
             PebbleNoteTheme {
                 RegistrationScreen(onRegistered = {
-                    startActivity(android.content.Intent(this, DashboardActivity::class.java))
+                    startActivity(Intent(this, LoginActivity::class.java))
                     finish()
                 })
             }
@@ -48,7 +54,9 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var errorText by remember { mutableStateOf<String?>(null) }
+    var submitting by remember { mutableStateOf(false) }
+    val ctx: Context = LocalContext.current
 
     // Colors matching the Login page gradient
     val startColor = Color(0xFFF8C1D9) // Light Pink
@@ -67,7 +75,7 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
             ) {
                 IconButton(onClick = {
 //                    val ctx = LocalContext.current
-                    (ctx as? android.app.Activity)?.finish()
+                    (ctx as? Activity)?.finish()
                 }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -185,9 +193,54 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // "Get Started" Button (Matching the White Background/Black Text style from Login)
+                    // Inline error message
+                    if (errorText != null) {
+                        Text(text = errorText!!, color = Color.Red, fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // "Create Account" Button (Firebase Auth; then route to Login)
                     Button(
-                        onClick = { onRegistered() },
+                        onClick = {
+                            if (submitting) return@Button
+                            // Basic validation
+                            if (fullName.isBlank()) {
+                                errorText = "Please enter your full name."
+                                return@Button
+                            }
+                            if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                                errorText = "Enter a valid email address."
+                                return@Button
+                            }
+                            if (password.length < 6) {
+                                errorText = "Password must be at least 6 characters."
+                                return@Button
+                            }
+                            submitting = true
+                            val auth = FirebaseAuth.getInstance()
+                            auth.createUserWithEmailAndPassword(email.trim(), password)
+                                .addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        val uid = task.result?.user?.uid
+                                        if (uid != null) {
+                                            val userMap = mapOf(
+                                                "name" to fullName,
+                                                "email" to email.trim()
+                                            )
+                                            FirebaseDatabase.getInstance().reference
+                                                .child("users")
+                                                .child(uid)
+                                                .setValue(userMap)
+                                        }
+                                        errorText = null
+                                        submitting = false
+                                        onRegistered()
+                                    } else {
+                                        submitting = false
+                                        errorText = task.exception?.localizedMessage ?: "Registration failed."
+                                    }
+                                }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -196,10 +249,11 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
                             containerColor = Color.White,
                             contentColor = Color.Black
                         ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+                        enabled = !submitting
                     ) {
                         Text(
-                            text = "Get Started",
+                            text = if (submitting) "Creating..." else "Create Account",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold
                         )

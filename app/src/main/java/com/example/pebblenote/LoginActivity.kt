@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,7 +37,8 @@ class LoginActivity : ComponentActivity() {
         // Auto-login if remembered
         val prefs = getSharedPreferences("pebble_prefs", MODE_PRIVATE)
         val remembered = prefs.getBoolean("remember_me", false)
-        if (remembered) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (remembered && currentUser != null) {
             val isAdmin = prefs.getBoolean("is_admin", false)
             val dest = if (isAdmin) AdminDashboardActivity::class.java else DashboardActivity::class.java
             startActivity(android.content.Intent(this, dest))
@@ -259,19 +261,65 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
                             val normalUser = "user@example.com"
                             val normalPass = "User@123"
 
-                            val ok = if (isAdminSelected) {
-                                email.equals(adminUser, ignoreCase = true) && password == adminPass
+                            if (isAdminSelected) {
+                                val ok = email.equals(adminUser, ignoreCase = true) && password == adminPass
+                                if (!ok) {
+                                    errorText = "Invalid Admin credentials."
+                                    return@Button
+                                }
+                                // Admin path continues below to remember prefs and route
                             } else {
-                                email.equals(normalUser, ignoreCase = true) && password == normalPass
+                                // Use FirebaseAuth for user login
+                                val auth = FirebaseAuth.getInstance()
+                                auth.signInWithEmailAndPassword(email.trim(), password)
+                                    .addOnCompleteListener { task ->
+                                        if (task.isSuccessful) {
+                                            // Persist remember me and route
+                                            if (rememberMeChecked) {
+                                                val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                                prefs.edit()
+                                                    .putBoolean("remember_me", true)
+                                                    .putBoolean("is_admin", false)
+                                                    .putString("email", email)
+                                                    .apply()
+                                            } else {
+                                                val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                                prefs.edit().clear().apply()
+                                            }
+                                            errorText = null
+                                            onLoginResult(false)
+                                        } else {
+                                            // Fallback to dummy user only if Firebase fails and matches dummy
+                                            val ok = email.equals(normalUser, ignoreCase = true) && password == normalPass
+                                            if (ok) {
+                                                if (rememberMeChecked) {
+                                                    val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                                    prefs.edit()
+                                                        .putBoolean("remember_me", true)
+                                                        .putBoolean("is_admin", false)
+                                                        .putString("email", email)
+                                                        .apply()
+                                                } else {
+                                                    val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
+                                                    prefs.edit().clear().apply()
+                                                }
+                                                errorText = null
+                                                onLoginResult(false)
+                                            } else {
+                                                errorText = task.exception?.localizedMessage ?: "Invalid User credentials."
+                                            }
+                                        }
+                                    }
+                                return@Button
                             }
 
-                            if (ok) {
+                            // Admin successful
                                 // Persist remember me
                                 if (rememberMeChecked) {
                                     val prefs = ctx.getSharedPreferences("pebble_prefs", android.content.Context.MODE_PRIVATE)
                                     prefs.edit()
                                         .putBoolean("remember_me", true)
-                                        .putBoolean("is_admin", isAdminSelected)
+                                        .putBoolean("is_admin", true)
                                         .putString("email", email)
                                         .apply()
                                 } else {
@@ -279,10 +327,7 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
                                     prefs.edit().clear().apply()
                                 }
                                 errorText = null
-                                onLoginResult(isAdminSelected)
-                            } else {
-                                errorText = "Invalid credentials for ${if (isAdminSelected) "Admin" else "User"}."
-                            }
+                                onLoginResult(true)
                         },
                         modifier = Modifier
                             .fillMaxWidth()

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 
 // Data class representing a PDF/Note item for selling
 data class PDFItem(
@@ -56,7 +61,43 @@ class DashboardActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PebbleNoteTheme {
-                DashboardScreen(dummyPDFs,
+                var pdfs by remember { mutableStateOf(dummyPDFs) }
+
+                // Load from Firebase Realtime Database `/notes`
+                LaunchedEffect(Unit) {
+                    val ref = FirebaseDatabase.getInstance().reference.child("notes")
+                    ref.addValueEventListener(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            val list = mutableListOf<PDFItem>()
+                            for (child in snapshot.children) {
+                                try {
+                                    val idStr = child.key ?: "0"
+                                    val id = idStr.toIntOrNull() ?: 0
+                                    val title = child.child("title").getValue(String::class.java) ?: "Untitled"
+                                    val priceVal = child.child("price").getValue(Any::class.java)
+                                    val price = when (priceVal) {
+                                        is Number -> "$${String.format("%.2f", priceVal.toDouble())}"
+                                        is String -> priceVal
+                                        else -> "$0.00"
+                                    }
+                                    val views = (child.child("views").getValue(Number::class.java)?.toInt()) ?: 0
+                                    val downloads = (child.child("downloads").getValue(Number::class.java)?.toInt()) ?: 0
+                                    val likes = (child.child("likes").getValue(Number::class.java)?.toInt()) ?: 0
+                                    val category = child.child("category").getValue(String::class.java) ?: "Notes"
+                                    val description = child.child("description").getValue(String::class.java) ?: ""
+                                    list.add(PDFItem(id, title, price, views, downloads, likes, category, description))
+                                } catch (_: Exception) { /* skip bad rows */ }
+                            }
+                            pdfs = if (list.isNotEmpty()) list else dummyPDFs
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            // Keep existing list; optionally log.
+                        }
+                    })
+                }
+
+                DashboardScreen(pdfs,
                     onLogout = {
                         // Clear remember me and session
                         val prefs = getSharedPreferences("pebble_prefs", MODE_PRIVATE)
@@ -71,6 +112,7 @@ class DashboardActivity : ComponentActivity() {
                     },
                     onBuy = { item ->
                         val intent = Intent(this, PurchaseActivity::class.java)
+                        intent.putExtra("noteId", item.id)
                         intent.putExtra("title", item.title)
                         intent.putExtra("price", item.price)
                         startActivity(intent)
