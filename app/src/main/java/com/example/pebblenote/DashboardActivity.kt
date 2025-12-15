@@ -32,10 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
+// Firebase removed for demo persistence of notes
 
 // Data class representing a PDF/Note item for selling
 data class PDFItem(
@@ -59,44 +56,23 @@ class DashboardActivity : ComponentActivity() {
             PebbleNoteTheme {
                 var pdfs by remember { mutableStateOf(emptyList<PDFItem>()) }
 
-                // Load from Firebase Realtime Database `/notes`
+                // Load from local store saved by Admin (demo persistence)
                 LaunchedEffect(Unit) {
-                    val ref = FirebaseDatabase.getInstance().reference.child("notes")
-                    ref.addValueEventListener(object : ValueEventListener {
-                        override fun onDataChange(snapshot: DataSnapshot) {
-                            val list = mutableListOf<PDFItem>()
-                            for (child in snapshot.children) {
-                                try {
-                                    val idStr = child.key ?: "0"
-                                    val id = idStr.toIntOrNull() ?: 0
-                                    val title = child.child("title").getValue(String::class.java) ?: "Untitled"
-                                    val priceVal = child.child("price").getValue(Any::class.java)
-                                    val price = when (priceVal) {
-                                        is Number -> "Rs ${String.format("%.2f", priceVal.toDouble())}"
-                                        is String -> priceVal
-                                        else -> "$0.00"
-                                    }
-                                    var previewUri: String? = null
-                                    val previewsNode = child.child("previewImageUris")
-                                    if (previewsNode.exists()) {
-                                        // pick first preview image uri if present
-                                        previewsNode.children.firstOrNull()?.getValue(String::class.java)?.let { previewUri = it }
-                                    }
-                                    val views = (child.child("views").getValue(Number::class.java)?.toInt()) ?: 0
-                                    val downloads = (child.child("downloads").getValue(Number::class.java)?.toInt()) ?: 0
-                                    val likes = (child.child("likes").getValue(Number::class.java)?.toInt()) ?: 0
-                                    val category = child.child("category").getValue(String::class.java) ?: "Notes"
-                                    val description = child.child("description").getValue(String::class.java) ?: ""
-                                    list.add(PDFItem(id, title, price, views, downloads, likes, category, description, previewUri))
-                                } catch (_: Exception) { /* skip bad rows */ }
-                            }
-                            pdfs = list
-                        }
-
-                        override fun onCancelled(error: DatabaseError) {
-                            // Keep existing list; optionally log.
-                        }
-                    })
+                    val adminNotes = LocalNotesStore.load(this@DashboardActivity)
+                    val mapped = adminNotes.filter { it.enabled }.map { n ->
+                        PDFItem(
+                            id = n.id,
+                            title = n.title,
+                            price = "Rs ${String.format("%.2f", n.price)}",
+                            views = 0,
+                            downloads = 0,
+                            likes = 0,
+                            category = n.category.ifBlank { "Notes" },
+                            description = n.description,
+                            previewImageUri = n.previewImageUris.firstOrNull()?.toString()
+                        )
+                    }
+                    pdfs = mapped
                 }
 
                 DashboardScreen(pdfs,

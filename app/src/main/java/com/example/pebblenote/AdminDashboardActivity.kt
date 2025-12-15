@@ -30,6 +30,9 @@ import com.google.firebase.database.FirebaseDatabase
 import android.content.Intent
 import androidx.compose.ui.tooling.preview.Preview
 
+// Demo mode: use local persistence only (no Firebase writes required)
+private const val DEMO_MODE = true
+
 // Admin-facing data model
 data class AdminNote(
     val id: Int,
@@ -59,72 +62,78 @@ fun AdminDashboardScreen() {
     val notes = remember { mutableStateListOf<AdminNote>() }
     val ctxState = rememberUpdatedState(LocalContext.current)
 
-    // Properly manage Firebase listeners and support both "notes" and "Notes" paths
-    DisposableEffect(Unit) {
-        val db = FirebaseDatabase.getInstance().reference
-        val lowerRef = db.child("notes")
-        val upperRef = db.child("Notes")
-        // Sync for fast repopulation (works even without persistence enabled)
-        lowerRef.keepSynced(true)
-        upperRef.keepSynced(true)
+    if (DEMO_MODE) {
+        LaunchedEffect(Unit) {
+            val initial = LocalNotesStore.load(ctxState.value)
+            notes.clear(); notes.addAll(initial.sortedBy { it.id })
+        }
+    } else {
+        // Properly manage Firebase listeners and support both "notes" and "Notes" paths
+        DisposableEffect(Unit) {
+            val db = FirebaseDatabase.getInstance().reference
+            val lowerRef = db.child("notes")
+            val upperRef = db.child("Notes")
+            lowerRef.keepSynced(true)
+            upperRef.keepSynced(true)
 
-        fun snapshotToNotes(snapshot: com.google.firebase.database.DataSnapshot): List<AdminNote> {
-            val list = mutableListOf<AdminNote>()
-            for (child in snapshot.children) {
-                try {
-                    val id = child.child("id").getValue(Number::class.java)?.toInt()
-                        ?: (child.key?.toIntOrNull() ?: 0)
-                    val title = child.child("title").getValue(String::class.java) ?: "Untitled"
-                    val price = child.child("price").getValue(Number::class.java)?.toDouble() ?: 0.0
-                    val pdfUri = child.child("pdfUri").getValue(String::class.java)
-                        ?.takeIf { it.isNotBlank() }?.let(Uri::parse)
-                    val previews = buildList {
-                        child.child("previewImageUris").children.forEach { p ->
-                            p.getValue(String::class.java)?.takeIf { it.isNotBlank() }?.let { add(Uri.parse(it)) }
+            fun snapshotToNotes(snapshot: com.google.firebase.database.DataSnapshot): List<AdminNote> {
+                val list = mutableListOf<AdminNote>()
+                for (child in snapshot.children) {
+                    try {
+                        val id = child.child("id").getValue(Number::class.java)?.toInt()
+                            ?: (child.key?.toIntOrNull() ?: 0)
+                        val title = child.child("title").getValue(String::class.java) ?: "Untitled"
+                        val price = child.child("price").getValue(Number::class.java)?.toDouble() ?: 0.0
+                        val pdfUri = child.child("pdfUri").getValue(String::class.java)
+                            ?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+                        val previews = buildList {
+                            child.child("previewImageUris").children.forEach { p ->
+                                p.getValue(String::class.java)?.takeIf { it.isNotBlank() }?.let { add(Uri.parse(it)) }
+                            }
                         }
-                    }
-                    val category = child.child("category").getValue(String::class.java) ?: "General"
-                    val description = child.child("description").getValue(String::class.java) ?: ""
-                    val enabled = child.child("enabled").getValue(Boolean::class.java) ?: true
-                    list.add(AdminNote(id, title, price, pdfUri, previews, category, description, enabled))
-                } catch (_: Exception) { /* skip malformed */ }
+                        val category = child.child("category").getValue(String::class.java) ?: "General"
+                        val description = child.child("description").getValue(String::class.java) ?: ""
+                        val enabled = child.child("enabled").getValue(Boolean::class.java) ?: true
+                        list.add(AdminNote(id, title, price, pdfUri, previews, category, description, enabled))
+                    } catch (_: Exception) { /* skip malformed */ }
+                }
+                return list
             }
-            return list
-        }
 
-        fun mergeAndSet(a: List<AdminNote>, b: List<AdminNote>) {
-            val map = LinkedHashMap<Int, AdminNote>()
-            a.forEach { map[it.id] = it }
-            b.forEach { map[it.id] = it }
-            notes.clear()
-            notes.addAll(map.values.sortedBy { it.id })
-        }
-
-        var lowerList: List<AdminNote> = emptyList()
-        var upperList: List<AdminNote> = emptyList()
-
-        val lowerListener = object : com.google.firebase.database.ValueEventListener {
-            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                lowerList = snapshotToNotes(snapshot)
-                mergeAndSet(lowerList, upperList)
+            fun mergeAndSet(a: List<AdminNote>, b: List<AdminNote>) {
+                val map = LinkedHashMap<Int, AdminNote>()
+                a.forEach { map[it.id] = it }
+                b.forEach { map[it.id] = it }
+                notes.clear()
+                notes.addAll(map.values.sortedBy { it.id })
             }
-            override fun onCancelled(error: com.google.firebase.database.DatabaseError) { /* no-op */ }
-        }
 
-        val upperListener = object : com.google.firebase.database.ValueEventListener {
-            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                upperList = snapshotToNotes(snapshot)
-                mergeAndSet(lowerList, upperList)
+            var lowerList: List<AdminNote> = emptyList()
+            var upperList: List<AdminNote> = emptyList()
+
+            val lowerListener = object : com.google.firebase.database.ValueEventListener {
+                override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                    lowerList = snapshotToNotes(snapshot)
+                    mergeAndSet(lowerList, upperList)
+                }
+                override fun onCancelled(error: com.google.firebase.database.DatabaseError) { /* no-op */ }
             }
-            override fun onCancelled(error: com.google.firebase.database.DatabaseError) { /* no-op */ }
-        }
 
-        lowerRef.addValueEventListener(lowerListener)
-        upperRef.addValueEventListener(upperListener)
+            val upperListener = object : com.google.firebase.database.ValueEventListener {
+                override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                    upperList = snapshotToNotes(snapshot)
+                    mergeAndSet(lowerList, upperList)
+                }
+                override fun onCancelled(error: com.google.firebase.database.DatabaseError) { /* no-op */ }
+            }
 
-        onDispose {
-            lowerRef.removeEventListener(lowerListener)
-            upperRef.removeEventListener(upperListener)
+            lowerRef.addValueEventListener(lowerListener)
+            upperRef.addValueEventListener(upperListener)
+
+            onDispose {
+                lowerRef.removeEventListener(lowerListener)
+                upperRef.removeEventListener(upperListener)
+            }
         }
     }
 
@@ -260,10 +269,13 @@ fun AdminDashboardScreen() {
                     onDelete = { noteToDelete = it },
                     onToggleEnabled = {
                         it.enabled = !it.enabled
-                        // Persist toggle
-                        // Write to lower-case path by default
-                        val ref = FirebaseDatabase.getInstance().reference.child("notes").child(it.id.toString())
-                        ref.child("enabled").setValue(it.enabled)
+                        if (DEMO_MODE) {
+                            LocalNotesStore.save(ctxState.value, notes)
+                        } else {
+                            // Persist toggle to Firebase
+                            val ref = FirebaseDatabase.getInstance().reference.child("notes").child(it.id.toString())
+                            ref.child("enabled").setValue(it.enabled)
+                        }
                     }
                 )
             }
@@ -279,19 +291,23 @@ fun AdminDashboardScreen() {
             onSave = { updated ->
                 val index = notes.indexOfFirst { it.id == updated.id }
                 if (index >= 0) notes[index] = updated
-                // Persist edit to Firebase
-                val ref = FirebaseDatabase.getInstance().reference.child("notes").child(updated.id.toString())
-                val data = mapOf(
-                    "id" to updated.id,
-                    "title" to updated.title,
-                    "price" to updated.price,
-                    "pdfUri" to (updated.pdfUri?.toString() ?: ""),
-                    "previewImageUris" to updated.previewImageUris.map { it.toString() },
-                    "category" to updated.category,
-                    "description" to updated.description,
-                    "enabled" to updated.enabled
-                )
-                ref.setValue(data)
+                if (DEMO_MODE) {
+                    LocalNotesStore.save(ctxState.value, notes)
+                } else {
+                    // Persist edit to Firebase
+                    val ref = FirebaseDatabase.getInstance().reference.child("notes").child(updated.id.toString())
+                    val data = mapOf(
+                        "id" to updated.id,
+                        "title" to updated.title,
+                        "price" to updated.price,
+                        "pdfUri" to (updated.pdfUri?.toString() ?: ""),
+                        "previewImageUris" to updated.previewImageUris.map { it.toString() },
+                        "category" to updated.category,
+                        "description" to updated.description,
+                        "enabled" to updated.enabled
+                    )
+                    ref.setValue(data)
+                }
                 editingNote = null
             }
         )
@@ -304,26 +320,32 @@ fun AdminDashboardScreen() {
             onSubmit = { newNote ->
                 val nextId = (notes.maxOfOrNull { it.id } ?: 0) + 1
                 val created = newNote.copy(id = nextId)
-                // Persist create to Firebase then update local on success
-                val ref = FirebaseDatabase.getInstance().reference.child("notes").child(nextId.toString())
-                val data = mapOf(
-                    "id" to created.id,
-                    "title" to created.title,
-                    "price" to created.price,
-                    "pdfUri" to (created.pdfUri?.toString() ?: ""),
-                    "previewImageUris" to created.previewImageUris.map { it.toString() },
-                    "category" to created.category,
-                    "description" to created.description,
-                    "enabled" to created.enabled
-                )
-                ref.setValue(data).addOnCompleteListener {
-                    if (it.isSuccessful) {
-                        // listener will also refresh, but add locally for instant feedback
-                        notes.add(created)
-                        showUploadDialog = false
-                        android.widget.Toast.makeText(ctxState.value, "Note uploaded", android.widget.Toast.LENGTH_SHORT).show()
-                    } else {
-                        android.widget.Toast.makeText(ctxState.value, it.exception?.localizedMessage ?: "Upload failed", android.widget.Toast.LENGTH_LONG).show()
+                if (DEMO_MODE) {
+                    notes.add(created)
+                    LocalNotesStore.save(ctxState.value, notes)
+                    showUploadDialog = false
+                    android.widget.Toast.makeText(ctxState.value, "Note uploaded", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    // Persist create to Firebase then update local on success
+                    val ref = FirebaseDatabase.getInstance().reference.child("notes").child(nextId.toString())
+                    val data = mapOf(
+                        "id" to created.id,
+                        "title" to created.title,
+                        "price" to created.price,
+                        "pdfUri" to (created.pdfUri?.toString() ?: ""),
+                        "previewImageUris" to created.previewImageUris.map { it.toString() },
+                        "category" to created.category,
+                        "description" to created.description,
+                        "enabled" to created.enabled
+                    )
+                    ref.setValue(data).addOnCompleteListener {
+                        if (it.isSuccessful) {
+                            notes.add(created)
+                            showUploadDialog = false
+                            android.widget.Toast.makeText(ctxState.value, "Note uploaded", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            android.widget.Toast.makeText(ctxState.value, it.exception?.localizedMessage ?: "Upload failed", android.widget.Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             }
@@ -338,16 +360,23 @@ fun AdminDashboardScreen() {
             text = { Text("This action cannot be undone.") },
             confirmButton = {
                 TextButton(onClick = {
-                    // Persist delete
-                    val ref = FirebaseDatabase.getInstance().reference.child("notes").child(toDelete.id.toString())
-                    ref.removeValue().addOnCompleteListener {
-                        if (it.isSuccessful) {
-                            notes.removeAll { it.id == toDelete.id }
-                            android.widget.Toast.makeText(ctxState.value, "Note deleted", android.widget.Toast.LENGTH_SHORT).show()
-                        } else {
-                            android.widget.Toast.makeText(ctxState.value, it.exception?.localizedMessage ?: "Delete failed", android.widget.Toast.LENGTH_LONG).show()
-                        }
+                    if (DEMO_MODE) {
+                        notes.removeAll { it.id == toDelete.id }
+                        LocalNotesStore.save(ctxState.value, notes)
+                        android.widget.Toast.makeText(ctxState.value, "Note deleted", android.widget.Toast.LENGTH_SHORT).show()
                         noteToDelete = null
+                    } else {
+                        // Persist delete to Firebase
+                        val ref = FirebaseDatabase.getInstance().reference.child("notes").child(toDelete.id.toString())
+                        ref.removeValue().addOnCompleteListener {
+                            if (it.isSuccessful) {
+                                notes.removeAll { it.id == toDelete.id }
+                                android.widget.Toast.makeText(ctxState.value, "Note deleted", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                android.widget.Toast.makeText(ctxState.value, it.exception?.localizedMessage ?: "Delete failed", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                            noteToDelete = null
+                        }
                     }
                 }) { Text("Delete", color = Color(0xFFF44336)) }
             },
