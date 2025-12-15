@@ -66,6 +66,21 @@ fun AdminDashboardScreen() {
         LaunchedEffect(Unit) {
             val initial = LocalNotesStore.load(ctxState.value)
             notes.clear(); notes.addAll(initial.sortedBy { it.id })
+            // Mirror local notes to Firebase so Realtime Database shows details
+            val dbRef = FirebaseDatabase.getInstance().reference.child("notes")
+            initial.forEach { n ->
+                val data = mapOf(
+                    "id" to n.id,
+                    "title" to n.title,
+                    "price" to n.price,
+                    "pdfUri" to (n.pdfUri?.toString() ?: ""),
+                    "previewImageUris" to n.previewImageUris.map { it.toString() },
+                    "category" to n.category,
+                    "description" to n.description,
+                    "enabled" to n.enabled
+                )
+                dbRef.child(n.id.toString()).setValue(data)
+            }
         }
     } else {
         // Properly manage Firebase listeners and support both "notes" and "Notes" paths
@@ -271,6 +286,9 @@ fun AdminDashboardScreen() {
                         it.enabled = !it.enabled
                         if (DEMO_MODE) {
                             LocalNotesStore.save(ctxState.value, notes)
+                            // Also mirror to Firebase for visibility
+                            val ref = FirebaseDatabase.getInstance().reference.child("notes").child(it.id.toString())
+                            ref.child("enabled").setValue(it.enabled)
                         } else {
                             // Persist toggle to Firebase
                             val ref = FirebaseDatabase.getInstance().reference.child("notes").child(it.id.toString())
@@ -293,6 +311,19 @@ fun AdminDashboardScreen() {
                 if (index >= 0) notes[index] = updated
                 if (DEMO_MODE) {
                     LocalNotesStore.save(ctxState.value, notes)
+                    // Mirror edit to Firebase for visibility
+                    val ref = FirebaseDatabase.getInstance().reference.child("notes").child(updated.id.toString())
+                    val data = mapOf(
+                        "id" to updated.id,
+                        "title" to updated.title,
+                        "price" to updated.price,
+                        "pdfUri" to (updated.pdfUri?.toString() ?: ""),
+                        "previewImageUris" to updated.previewImageUris.map { it.toString() },
+                        "category" to updated.category,
+                        "description" to updated.description,
+                        "enabled" to updated.enabled
+                    )
+                    ref.setValue(data)
                 } else {
                     // Persist edit to Firebase
                     val ref = FirebaseDatabase.getInstance().reference.child("notes").child(updated.id.toString())
@@ -323,6 +354,19 @@ fun AdminDashboardScreen() {
                 if (DEMO_MODE) {
                     notes.add(created)
                     LocalNotesStore.save(ctxState.value, notes)
+                    // Mirror create to Firebase for visibility
+                    val ref = FirebaseDatabase.getInstance().reference.child("notes").child(nextId.toString())
+                    val data = mapOf(
+                        "id" to created.id,
+                        "title" to created.title,
+                        "price" to created.price,
+                        "pdfUri" to (created.pdfUri?.toString() ?: ""),
+                        "previewImageUris" to created.previewImageUris.map { it.toString() },
+                        "category" to created.category,
+                        "description" to created.description,
+                        "enabled" to created.enabled
+                    )
+                    ref.setValue(data)
                     showUploadDialog = false
                     android.widget.Toast.makeText(ctxState.value, "Note uploaded", android.widget.Toast.LENGTH_SHORT).show()
                 } else {
@@ -363,6 +407,9 @@ fun AdminDashboardScreen() {
                     if (DEMO_MODE) {
                         notes.removeAll { it.id == toDelete.id }
                         LocalNotesStore.save(ctxState.value, notes)
+                        // Mirror delete to Firebase
+                        val ref = FirebaseDatabase.getInstance().reference.child("notes").child(toDelete.id.toString())
+                        ref.removeValue()
                         android.widget.Toast.makeText(ctxState.value, "Note deleted", android.widget.Toast.LENGTH_SHORT).show()
                         noteToDelete = null
                     } else {
