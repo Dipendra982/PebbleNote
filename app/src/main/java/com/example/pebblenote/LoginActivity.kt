@@ -199,12 +199,6 @@ fun LoginScreen(onLoginResult: (isAdmin: Boolean) -> Unit = {}) {
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "Forgot password?",
-                                color = endColor,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedButton(
                                 onClick = {

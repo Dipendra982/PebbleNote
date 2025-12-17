@@ -176,21 +176,6 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // "Forgot password?" Link (Matching Login screen's footer placement)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Text(
-                            text = "Forgot password?",
-                            color = endColor,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                    }
-
-
                     Spacer(modifier = Modifier.height(32.dp))
 
                     // Inline error message
