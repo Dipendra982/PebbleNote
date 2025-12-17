@@ -9,7 +9,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -121,26 +125,53 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
                         .padding(top = 40.dp), // Matches the vertical positioning from Login
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // --- App Logo ---
+                    Image(
+                        painter = painterResource(id = R.drawable.logo),
+                        contentDescription = "App Logo",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
                     // --- Header Text ---
                     Text(
-                        text = "Create Your Account",
+                        text = "Create account",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.Black,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = "We're here to help you reach the peaks of learning. Are you ready?",
-                        fontSize = 14.sp,
-                        color = Color.DarkGray,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 20.sp
-                    )
+                    // "Already have an account?" with clickable "sign in"
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Already have an account? ",
+                            fontSize = 14.sp,
+                            color = Color.DarkGray
+                        )
+                        Text(
+                            text = "sign in",
+                            fontSize = 14.sp,
+                            color = Color(0xFF7C3AED),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable {
+                                val intent = Intent(ctx, LoginActivity::class.java)
+                                ctx.startActivity(intent)
+                                (ctx as? Activity)?.finish()
+                            }
+                        )
+                    }
 
-                    Spacer(modifier = Modifier.height(48.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
 
                     // --- Form Fields ---
 
@@ -176,7 +207,7 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
 
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     // Inline error message
                     if (errorText != null) {
@@ -184,7 +215,7 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    // "Create Account" Button (Firebase Auth; then route to Login)
+                    // "Sign up" Button (Firebase Auth; then route to Login)
                     Button(
                         onClick = {
                             if (submitting) return@Button
@@ -231,39 +262,14 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
                             .height(56.dp),
                         shape = RoundedCornerShape(28.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color.Black
+                            containerColor = Color(0xFF7C3AED),
+                            contentColor = Color.White
                         ),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
                         enabled = !submitting
                     ) {
                         Text(
-                            text = if (submitting) "Creating..." else "Create Account",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // "I have already account" Sign In Button
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(ctx, LoginActivity::class.java)
-                            ctx.startActivity(intent)
-                            (ctx as? Activity)?.finish()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(28.dp),
-                        border = ButtonDefaults.outlinedButtonBorder,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.Black
-                        )
-                    ) {
-                        Text(
-                            text = "I have already account",
+                            text = if (submitting) "Creating..." else "Sign up",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold
                         )
