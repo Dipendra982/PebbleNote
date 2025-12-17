@@ -386,16 +386,3 @@ fun StatIconText(icon: ImageVector, text: String, color: Color) {
         Text(text, fontSize = 12.sp, color = color)
     }
 }
-
-//@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
-//@Composable
-//fun DashboardScreenPreview() {
-//    PebbleNoteTheme {
-//        DashboardScreen(
-//            dummyPDFs,
-//            onLogout = TODO(),
-//            onProfile = TODO(),
-//            onBuy = TODO()
-//        )
-//    }
-//}
