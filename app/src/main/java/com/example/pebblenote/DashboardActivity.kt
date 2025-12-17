@@ -386,3 +386,20 @@ fun StatIconText(icon: ImageVector, text: String, color: Color) {
         Text(text, fontSize = 12.sp, color = color)
     }
 }
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun DashboardScreenPreview() {
+    PebbleNoteTheme {
+        val samplePdfs = listOf(
+            PDFItem(1, "Math Notes", "Rs 50.00", 100, 25, 10),
+            PDFItem(2, "Physics Notes", "Rs 75.00", 150, 40, 20)
+        )
+        DashboardScreen(
+            samplePdfs,
+            onLogout = {},
+            onProfile = {},
+            onBuy = {}
+        )
+    }
+}

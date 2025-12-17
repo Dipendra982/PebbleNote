@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -143,6 +144,18 @@ fun PurchaseScreen(noteId: Int, title: String, price: String) {
                     })
                 }) { Text("Skip") }
             }
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun PurchaseScreenPreview() {
+    PebbleNoteTheme {
+        PurchaseScreen(
+            noteId = 1,
+            title = "Advanced Mathematics Notes",
+            price = "Rs 99.00"
         )
     }
 }

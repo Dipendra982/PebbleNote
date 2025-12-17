@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pebblenote.ui.theme.PebbleNoteTheme
@@ -151,5 +152,13 @@ fun ProfileScreen() {
                 Text("Save Changes", color = MaterialTheme.colorScheme.onPrimary)
             }
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun ProfileScreenPreview() {
+    PebbleNoteTheme {
+        ProfileScreen()
     }
 }
