@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ import com.example.pebblenote.ui.theme.PebbleNoteTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import android.widget.Toast
+import android.content.Intent
 
 class PurchaseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,6 +46,7 @@ class PurchaseActivity : ComponentActivity() {
 fun PurchaseScreen(noteId: Int, title: String, price: String) {
     var selectedMethod by remember { mutableStateOf("Khalti") }
     var showSuccess by remember { mutableStateOf(false) }
+    var downloadInProgress by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
 
     Scaffold(
@@ -107,14 +110,38 @@ fun PurchaseScreen(noteId: Int, title: String, price: String) {
         AlertDialog(
             onDismissRequest = { showSuccess = false },
             title = { Text("Payment Successful") },
-            text = { Text("Your purchase was completed via $selectedMethod.") },
+            text = { Text("Your purchase was completed via $selectedMethod.\n\nYou can now download your PDF!") },
             confirmButton = {
+                Button(
+                    onClick = {
+                        downloadInProgress = true
+                        // Simulate download process
+                        Thread {
+                            Thread.sleep(1000)
+                            Toast.makeText(ctx, "Demo downloaded successfully", Toast.LENGTH_SHORT).show()
+                            downloadInProgress = false
+                            // Redirect to Dashboard
+                            showSuccess = false
+                            ctx.startActivity(Intent(ctx, DashboardActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            })
+                        }.start()
+                    },
+                    enabled = !downloadInProgress,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
+                ) {
+                    Icon(Icons.Default.FileDownload, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (downloadInProgress) "Downloading..." else "Download PDF")
+                }
+            },
+            dismissButton = {
                 TextButton(onClick = {
                     showSuccess = false
-                    ctx.startActivity(android.content.Intent(ctx, DashboardActivity::class.java).apply {
-                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    ctx.startActivity(Intent(ctx, DashboardActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                     })
-                }) { Text("OK") }
+                }) { Text("Skip") }
             }
         )
     }

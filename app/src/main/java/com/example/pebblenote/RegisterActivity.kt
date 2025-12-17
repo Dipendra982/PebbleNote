@@ -175,7 +175,7 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
-
+                    
                     Spacer(modifier = Modifier.height(32.dp))
 
                     // Inline error message
@@ -239,6 +239,31 @@ fun RegistrationScreen(onRegistered: () -> Unit = {}) {
                     ) {
                         Text(
                             text = if (submitting) "Creating..." else "Create Account",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // "I have already account" Sign In Button
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(ctx, LoginActivity::class.java)
+                            ctx.startActivity(intent)
+                            (ctx as? Activity)?.finish()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        border = ButtonDefaults.outlinedButtonBorder,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text(
+                            text = "I have already account",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold
                         )
